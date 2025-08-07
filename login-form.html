@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adams</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+    
+    <div class="container">
+        <main id="main" class="card" role="main">
+            <div class="card-header">
+                <div class="logo" aria-hidden="true">AW</div>
+                <h1>Welcome Back</h1>
+                <p class="subtitle">Sign in to continue to your account</p>
+            </div>
+            
+            <div class="card-body">
+                <div class="success-message" id="successMessage" role="alert" aria-live="polite">
+                    Successfully signed in! Redirecting...
+                </div>
+                
+                <form id="loginForm" aria-label="Sign in form">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                autocomplete="email"
+                                aria-describedby="emailError"
+                                aria-required="true"
+                                aria-invalid="false"
+                                placeholder="email@evilmartians.com"
+                            >
+                            <span class="input-icon" aria-hidden="true"><i class="fa fa-envelope"></i></span>
+                        </div>
+                        <div class="error-message" id="emailError" role="alert" aria-live="polite"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password"
+                                autocomplete="current-password"
+                                aria-describedby="passwordError passwordStrength"
+                                aria-required="true"
+                                aria-invalid="false"
+                                placeholder="Enter your password"
+                            >
+                            <button 
+                                type="button" 
+                                class="input-icon password-toggle"
+                                id="togglePassword"
+                                aria-label="Toggle password visibility"
+                                tabindex="0"
+                            >
+                                <span id="toggleIcon"><i class="fa fa-eye" style="font-size: 1.2rem;"></i></span>
+                            </button>
+                        </div>
+                        <div class="error-message" id="passwordError" role="alert" aria-live="polite"></div>
+                    </div>
+                    
+                    <div class="form-footer">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">Remember me</label>
+                        </div>
+                        <a href="#" class="forgot-link" aria-label="Forgot password? Reset it here">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="btn-text">Sign In</span>
+                        <span class="spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>or continue with</span>
+                </div>
+                
+                <div class="social-login">
+                    <button type="button" class="btn-social" aria-label="Sign in with Google">
+                        <i class="fa fa-google" style="font-size: 1rem;"></i>
+                        <span>Google</span>
+                    </button>
+                    <button type="button" class="btn-social" aria-label="Sign in with GitHub">
+                        <i class="fa fa-github" style="font-size: 1.2rem;"></i>
+                        <span>GitHub</span>
+                    </button>
+                </div>
+            </div>
+            
+            <footer class="card-footer">
+                <p>Don't have an account? <a href="#" aria-label="Sign up for a new account">Sign up</a></p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Mock fetch for API calls
+        window.fetch = function(url, options) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    const body = JSON.parse(options.body);
+                    
+                    if (body.email === 'test@evilmartians.com' && body.password === 'Password123!') {
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve({
+                                success: true,
+                                token: 'mock-jwt-token',
+                                user: {
+                                    id: 1,
+                                    email: body.email,
+                                    name: 'Test User'
+                                }
+                            })
+                        });
+                    } else if (body.email === 'test@evilmartians.com') {
+                        resolve({
+                            ok: false,
+                            status: 401,
+                            json: () => Promise.resolve({
+                                success: false,
+                                error: 'Invalid password'
+                            })
+                        });
+                    } else {
+                        resolve({
+                            ok: false,
+                            status: 404,
+                            json: () => Promise.resolve({
+                                success: false,
+                                error: 'User not found'
+                            })
+                        });
+                    }
+                }, 1000);
+            });
+        };
+
+        // Form validation and interaction logic
+        const form = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const submitBtn = document.getElementById('submitBtn');
+        const togglePassword = document.getElementById('togglePassword');
+        const toggleIcon = document.getElementById('toggleIcon');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        const successMessage = document.getElementById('successMessage');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            toggleIcon.innerHTML = type === 'password' ? `<i class="fa fa-eye" style="font-size: 1.2rem !important;"></i>` : `<i class="fa fa-eye-slash" style="font-size: 1.2rem !important;"></i>`;
+            
+            const announcement = type === 'password' ? 'Password hidden' : 'Password visible';
+            announceToScreenReader(announcement);
+        });
+
+        function announceToScreenReader(message) {
+            const announcement = document.createElement('div');
+            announcement.setAttribute('role', 'status');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.className = 'sr-only';
+            announcement.textContent = message;
+            document.body.appendChild(announcement);
+            setTimeout(() => announcement.remove(), 1000);
+        }
+
+        function showCustomAlert(message, type = 'info', duration = 4000) {
+            const alert = document.createElement('div');
+            alert.className = `custom-alert ${type}`;
+            alert.setAttribute('role', 'alert');
+            alert.setAttribute('aria-live', 'assertive');
+            
+            alert.innerHTML = `
+                <div class="custom-alert-icon">
+                    <i class="fa ${type === 'success' ? 'fa-check' : type === 'warning' ? 'fa-exclamation-triangle' : type === 'error' ? 'fa-times' : 'fa-info'}"></i>
+                </div>
+                <div class="custom-alert-message">${message}</div>
+                <button class="custom-alert-close" aria-label="Close alert">
+                    <i class="fa fa-times"></i>
+                </button>
+            `;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => alert.classList.add('show'), 10);
+            
+            const closeBtn = alert.querySelector('.custom-alert-close');
+            const closeAlert = () => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 300);
+            };
+            
+            closeBtn.addEventListener('click', closeAlert);
+            
+            if (duration > 0) {
+                setTimeout(closeAlert, duration);
+            }
+            
+            return alert;
+        }
+
+        passwordInput.addEventListener('input', (e) => {
+            const password = e.target.value;
+            if (passwordError.classList.contains('visible')) {
+                clearError(passwordInput, passwordError);
+            }
+        });
+
+        emailInput.addEventListener('input', () => {
+            if (emailError.classList.contains('visible')) {
+                clearError(emailInput, emailError);
+            }
+        });
+
+        function validateEmail(email) {
+            if (!email) {
+                return 'Email is required';
+            }
+            if (!emailRegex.test(email)) {
+                return 'Please enter a valid email address';
+            }
+            return null;
+        }
+
+        function validatePassword(password) {
+            if (!password) {
+                return 'Password is required';
+            }
+            if (password.length < 6) {
+                return 'Password must be at least 6 characters';
+            }
+            return null;
+        }
+
+        function showError(input, errorElement, message) {
+            input.classList.add('error');
+            input.setAttribute('aria-invalid', 'true');
+            errorElement.textContent = message;
+            errorElement.classList.add('visible');
+        }
+
+        function clearError(input, errorElement) {
+            input.classList.remove('error');
+            input.setAttribute('aria-invalid', 'false');
+            errorElement.textContent = '';
+            errorElement.classList.remove('visible');
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            clearError(emailInput, emailError);
+            clearError(passwordInput, passwordError);
+            
+            const emailValidation = validateEmail(emailInput.value);
+            const passwordValidation = validatePassword(passwordInput.value);
+            
+            let hasErrors = false;
+            
+            if (emailValidation) {
+                showError(emailInput, emailError, emailValidation);
+                hasErrors = true;
+            }
+            
+            if (passwordValidation) {
+                showError(passwordInput, passwordError, passwordValidation);
+                hasErrors = true;
+            }
+            
+            if (hasErrors) {
+                if (emailValidation) {
+                    emailInput.focus();
+                } else {
+                    passwordInput.focus();
+                }
+                return;
+            }
+            
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            
+            try {
+                // Make API call
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: emailInput.value,
+                        password: passwordInput.value,
+                        remember: document.getElementById('remember').checked
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    successMessage.classList.add('visible');
+                    setTimeout(() => {
+                        successMessage.classList.remove('visible');
+                    }, 2000);
+                    form.reset();
+                } else {
+                    if (data.error === 'Invalid password') {
+                        showError(passwordInput, passwordError, data.error);
+                        passwordInput.focus();
+                    } else if (data.error === 'User not found') {
+                        showError(emailInput, emailError, 'No account found with this email');
+                        emailInput.focus();
+                    } else {
+                        showError(emailInput, emailError, 'An error occurred. Please try again.');
+                    }
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError(emailInput, emailError, 'Network error. Please check your connection.');
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        document.querySelectorAll('.btn-social').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const provider = e.currentTarget.textContent.trim();
+                console.log(`Initiating ${provider} OAuth flow...`);
+                showCustomAlert(`Initiating ${provider} OAuth flow...`, 'info');
+            });
+        });
+
+        document.querySelector('.forgot-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Redirecting to password reset...');
+            showCustomAlert('Redirecting to password reset...', 'info');
+        });
+
+        document.querySelector('.card-footer a').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Redirecting to sign up...');
+            showCustomAlert('Redirecting to sign up...', 'info');
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.activeElement.blur();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            emailInput.focus();
+        });
+
+        console.log('Test credentials: test@evilmartians.com / Password123!');
+    </script>
+</body>
+</html>
